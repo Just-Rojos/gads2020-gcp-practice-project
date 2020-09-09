@@ -1,0 +1,87 @@
+# LAB: VPC Networking
+
+## Objectives: 
+
+In this lab, you learn how to perform the following tasks:
+
+    - Explore the default VPC network
+    - Create an auto mode network with firewall rules
+    - Convert an auto mode network to a custom mode network
+    - Create custom mode VPC networks with firewall rules
+    - Create VM instances using Compute Engine
+    - Explore the connectivity for VM instances across VPC networks
+    
+## Steps: 
+
+1. Explore the default VPC network 
+    a. View the subnets in the default network 
+            gcloud compute networks subnets list
+    b. View the route within the VPC network
+            gcloud compute routes list
+    c. View the firewall rules for the default network
+            gcloud compute firewall-rules list
+    d. Delete the firewall rules for the default network
+            gcloud compute firewall-rules delete default-allow-icmp default-allow-rdp default-allow-ssh default-allow-internal
+    e. Delete the default network 
+            gcloud compute networks delete default
+    f. Attempt to create a VM instance without a VPC network to verify that this is not possible
+            gcloud compute networks create mynetwork --subnet-mode=default 
+            
+2. Create an auto mode network with firewall rules
+    a. Create an auto mode VPC network
+            gcloud compute networks create mynetwork --subnet-mode=auto 
+    b. Create firewall rule for the VPC network
+            gcloud compute firewall-rules create mynetwork-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=mynetwork --action=ALLOW --rules=icmp,tcp:22,tcp:3389 --source-ranges=0.0.0.0/0
+            gcloud compute firewall-rules create mynetwork-allow-internal --direction=INGRESS --priority=1000 --network=mynetwork --source-ranges=10.128.0.0/9 --action=ALLOW --rules=all
+    c. Create mynet-us-vm VM instance in us-central1 region
+            gcloud compute instances create mynet-us-vm --zone=us-central1-c --machine-type=n1-standard-1 --subnet=default
+    d. Create mynet-eu-vm VM instance in europe-west1 region
+            gcloud compute instances create mynet-eu-vm --zone=europe-west1-c --machine-type=n1-standard-1 --subnet=default
+    e. Verify connectivity for the created VM instances via SSH and ping tests
+            ssh  mynet-us-vm
+            ping -c 3 mynet-eu-vm
+            ping 35.187.35.46
+    f. Convert the auto mode VPC network to a custom mode VPC network
+            gcloud compute networks create mynetwork --subnet-mode=custom
+    g. Verify VPC network is in custom mode 
+            gcloud compute networks list
+
+3. Convert an auto mode network to a custom mode network
+    a. Create a custom mode management VPC network
+            gcloud compute networks create managementnet --subnet-mode=custom
+    b. Create subnetwork for the management network
+            gcloud compute networks subnets create managementsubnet-us --network=managementnet --region=us-central1 --range=10.130.0.0/20
+    c. Create a custom mode private VPC network
+            gcloud compute networks create privatenet --subnet-mode=custom
+    d. Create subnetwork for the private network
+            gcloud compute networks subnets create privatesubnet-eu --network=privatenet --region=europe-west1 --range=172.20.0.0/20
+    e. Verify management and private VPC networks are created
+            gcloud compute networks list
+    f. Verify management and private VPC subnetworks are created
+            gcloud compute networks subnets list --sort-by=NETWORK
+            
+4. Create custom mode VPC networks with firewall rules
+    a. Create firewall rules for management VPC network
+            gcloud compute firewall-rules create managementnet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=managementnet --action=ALLOW --rules=icmp,tcp:22,tcp:3389 --source-ranges=0.0.0.0/0
+    b. Create firewall rules for private VPC network
+            gcloud compute firewall-rules create privatenet-allow-icmp-ssh-rdp --direction=INGRESS --priority=1000 --network=privatenet --action=ALLOW --rules=icmp,tcp:22,tcp:3389 --source-ranges=0.0.0.0/0
+    c. Verify firewall rules for the management and private VPC networks
+            gcloud compute firewall-rules list --sort-by=NETWORK
+            
+5. Create VM instances using Compute Engine
+    a. Create managementnet-us-vm VM instance for the management VPC network
+            gcloud compute instances create managementnet-us-vm --zone=us-central1-c --machine-type=f1-micro --subnet=managementsubnet-us
+    b. Create privatenet-us-vm VM instance for the private VPC network
+            gcloud compute instances create privatenet-us-vm --zone=us-central1-c --machine-type=f1-micro --subnet=privatesubnet-us
+    c. Verify managementnet-us-vm and privatenet-us-vm VM instances  
+            gcloud compute instances list --sort-by=ZONE
+            
+6. Explore the connectivity for VM instances across VPC networks
+    a. Connect to mynet-us-vm VM instance via SSH and test connectivity to the mynet-eu-vm, managementnet-us-vm and privatenet-us-vm VM instances on their respective external IP addresses
+            ping -c 4 35.187.35.46
+            ping -c 4 34.123.88.25
+            ping -c 4 35.222.123.176
+    b. Connect to mynet-us-vm VM instance via SSH and test connectivity to the mynet-eu-vm, managementnet-us-vm and privatenet-us-vm VM instances on their respective internal IP addresses   
+            ping -c 3 mynet-eu-vm
+            ping -c 3 managementnet-us-vm
+            ping -c 3 privatenet-us-vm
