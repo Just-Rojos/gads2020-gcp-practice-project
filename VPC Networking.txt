@@ -38,7 +38,7 @@ In this lab, you learn how to perform the following tasks:
     d. Create mynet-eu-vm VM instance in europe-west1 region
             gcloud compute instances create mynet-eu-vm --zone=europe-west1-c --machine-type=n1-standard-1 --subnet=default
     e. Verify connectivity for the created VM instances via SSH and ping tests
-            ssh  mynet-us-vm
+            gcloud compute ssh mynet-us-vm
             ping -c 3 mynet-eu-vm
             ping 35.187.35.46
     f. Convert the auto mode VPC network to a custom mode VPC network
@@ -78,10 +78,12 @@ In this lab, you learn how to perform the following tasks:
             
 6. Explore the connectivity for VM instances across VPC networks
     a. Connect to mynet-us-vm VM instance via SSH and test connectivity to the mynet-eu-vm, managementnet-us-vm and privatenet-us-vm VM instances on their respective external IP addresses
+            gcloud compute ssh mynet-us-vm
             ping -c 4 35.187.35.46
             ping -c 4 34.123.88.25
             ping -c 4 35.222.123.176
     b. Connect to mynet-us-vm VM instance via SSH and test connectivity to the mynet-eu-vm, managementnet-us-vm and privatenet-us-vm VM instances on their respective internal IP addresses   
+            gcloud compute ssh mynet-us-vm
             ping -c 3 mynet-eu-vm
             ping -c 3 managementnet-us-vm
             ping -c 3 privatenet-us-vm
