@@ -1,0 +1,62 @@
+# LAB: Implement Private Google Access and Cloud NAT
+
+## Objectives: 
+
+In this lab, you learn how to perform the following tasks:
+
+    - Configure a VM instance that doesn't have an external IP address
+    - Connect to a VM instance using an Identity-Aware Proxy (IAP) tunnel
+    - Enable Private Google Access on a subnet
+    - Configure a Cloud NAT gateway
+    - Verify access to public IP addresses of Google APIs and services and other connections to the internet
+
+## Steps: 
+
+1. Configure a VM instance that doesn't have an external IP address 
+    a. Create a VPC network 
+            gcloud compute networks create privatenet --subnet-mode=custom
+            gcloud compute networks subnets create privatenet-us --range=10.130.0.0/20 --network=privatenet --region=us-central1
+    b. Create firewall rules
+            gcloud compute firewall-rules create privatenet-allow-ssh --direction=INGRESS --priority=1000 --network=privatenet --action=ALLOW --rules=tcp:22 --source-ranges=35.235.240.0/20
+    c. Create the VM instance with no public IP address
+            gcloud compute instances create vm-internal --zone=us-central1-c --machine-type=n1-standard-1 --subnet=privatenet-us --no-address
+
+2. Connect to a VM instance using an Identity-Aware Proxy (IAP) tunnel
+    a. SSH to vm-internal to test the IAP tunnel via ping
+            gcloud compute ssh vm-internal --zone us-central1-c --tunnel-through-iap
+            ping -c 2 www.google.com
+    b. Close Cloud Shell 
+            exit
+
+3. Enable Private Google Access on a subnet
+    a. Create a Cloud Storage bucket
+            gsutil mb -b on gs://qwiklabs-gcp-00-3e5a6dde617ef_mybucket/
+    b. Copy an image file into bucket
+            gsutil cp gs://cloud-training/gcpnet/private/access.svg gs://qwiklabs-gcp-00-3e5a6dde617ef_mybucket
+    c. Copy the image from Cloud Storage bucket to the VM instance to access it from the VM instance
+            gsutil cp gs://qwiklabs-gcp-00-3e5a6dde617ef_mybucket/*.svg .
+    d. Enable Private Google Access 
+            gcloud compute networks subnets update privatenet-us --region=us-central1 --enable-private-ip-google-access
+    e. Access the VM instance and copy the image from Cloud Storage bucket to the VM instance
+            gcloud compute ssh vm-internal --zone us-central1-c --tunnel-through-iap
+            gsutil cp gs://qwiklabs-gcp-00-3e5a6dde617ef_mybucket/*.svg .
+    f. Close Cloud Shell 
+            exit
+            
+4. Configure a Cloud NAT gateway
+    a. Update the VM instances
+            sudo apt-get update
+    b. Connect to the VM instance and attempt an update
+            gcloud compute ssh vm-internal --zone us-central1-c --tunnel-through-iap
+            sudo apt-get update
+    c. Configure a Cloud NAT gateway
+            gcloud compute routers nats create nat-config --region=us-central1 --router=nat-router --auto-allocate-nat-external-ips --nat-all-subnet-ip-ranges
+
+5. Verify access to public IP addresses of Google APIs and services and other connections to the internet
+    a. Enabling logging 
+            gcloud compute routers nats update nat-config --region=us-central1 --router=nat-router --enable-logging 
+    b. Verify the Cloud NAT gateway access to internet
+            sudo apt-get update
+            ping -c 2 www.cnn.com
+    c. Close Cloud Shell 
+            exit
